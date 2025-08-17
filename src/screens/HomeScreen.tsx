@@ -1,0 +1,365 @@
+// Home Screen - Calendar view with events
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { Calendar, DateData } from 'react-native-calendars';
+import { useEvents } from '../hooks/useEvents';
+import { useCalendars } from '../hooks/useCalendars';
+import { COLORS, FONT_SIZES } from '../constants/config';
+import { Event } from '../types';
+
+export const HomeScreen: React.FC = () => {
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const { events, isLoading: eventsLoading, getEventsForDate, getEventsByDate } = useEvents();
+  const { calendars, isLoading: calendarsLoading } = useCalendars();
+
+  // Get events for selected date
+  const selectedDateEvents = useMemo(() => {
+    return getEventsForDate(new Date(selectedDate));
+  }, [selectedDate, getEventsForDate]);
+
+  // Prepare marked dates for calendar
+  const markedDates = useMemo(() => {
+    const marks: any = {};
+    const eventsByDate = getEventsByDate();
+    
+    // Mark all dates with events
+    Object.keys(eventsByDate).forEach(date => {
+      const dayEvents = eventsByDate[date];
+      marks[date] = {
+        marked: true,
+        dots: dayEvents.slice(0, 3).map((event, index) => {
+          const calendar = calendars.find(c => c.id === event.calendar_id);
+          return {
+            key: `event-${index}`,
+            color: calendar?.color || COLORS.PRIMARY,
+          };
+        }),
+      };
+    });
+    
+    // Mark selected date
+    marks[selectedDate] = {
+      ...marks[selectedDate],
+      selected: true,
+      selectedColor: COLORS.PRIMARY,
+    };
+    
+    return marks;
+  }, [selectedDate, getEventsByDate, calendars]);
+
+  const getCalendarColor = (calendarId: string): string => {
+    const calendar = calendars.find(c => c.id === calendarId);
+    return calendar?.color || COLORS.PRIMARY;
+  };
+
+  const handleDayPress = (day: DateData) => {
+    setSelectedDate(day.dateString);
+  };
+
+  const handleEventPress = (event: Event) => {
+    Alert.alert(
+      event.title,
+      `${event.description || 'No description'}\n\nLocation: ${event.location || 'No location'}\nTime: ${formatEventTime(event)}`,
+      [
+        { text: 'Edit', onPress: () => console.log('Edit event:', event.id) },
+        { text: 'Delete', onPress: () => handleDeleteEvent(event), style: 'destructive' },
+        { text: 'OK', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleDeleteEvent = (event: Event) => {
+    Alert.alert(
+      'Delete Event',
+      `Are you sure you want to delete "${event.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete:', event.id) },
+      ]
+    );
+  };
+
+  const handleCreateEvent = () => {
+    console.log('Create new event for date:', selectedDate);
+  };
+
+  const formatEventTime = (event: Event): string => {
+    const start = new Date(event.start_time);
+    const end = new Date(event.end_time);
+    
+    if (event.all_day) return 'All day';
+    
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    };
+    
+    return `${formatTime(start)} - ${formatTime(end)}`;
+  };
+
+  const renderEventCard = (event: Event) => {
+    const calendar = calendars.find(c => c.id === event.calendar_id);
+    const calendarColor = calendar?.color || COLORS.PRIMARY;
+    
+    return (
+      <TouchableOpacity
+        key={event.id}
+        style={[styles.eventCard, { borderLeftColor: calendarColor }]}
+        onPress={() => handleEventPress(event)}
+      >
+        <View style={styles.eventTime}>
+          <Text style={styles.eventTimeText}>{formatEventTime(event)}</Text>
+        </View>
+        
+        <View style={styles.eventContent}>
+          <Text style={styles.eventTitle} numberOfLines={1}>
+            {event.title}
+          </Text>
+          {event.location && (
+            <Text style={styles.eventLocation} numberOfLines={1}>
+              📍 {event.location}
+            </Text>
+          )}
+          <Text style={[styles.eventCalendar, { color: calendarColor }]}>
+            {calendar?.name || 'Unknown Calendar'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  if (eventsLoading || calendarsLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.PRIMARY} />
+        <Text style={styles.loadingText}>Loading calendar...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView>
+        {/* Calendar Component */}
+        <View style={styles.calendarContainer}>
+          <Calendar
+            current={selectedDate}
+            onDayPress={handleDayPress}
+            markedDates={markedDates}
+            markingType={'multi-dot'}
+            theme={{
+              backgroundColor: COLORS.BACKGROUND.PRIMARY,
+              calendarBackground: COLORS.BACKGROUND.CARD,
+              selectedDayBackgroundColor: COLORS.PRIMARY,
+              selectedDayTextColor: 'white',
+              todayTextColor: COLORS.PRIMARY,
+              dayTextColor: COLORS.TEXT.PRIMARY,
+              textDisabledColor: COLORS.TEXT.DISABLED,
+              dotColor: COLORS.PRIMARY,
+              arrowColor: COLORS.PRIMARY,
+              monthTextColor: COLORS.TEXT.PRIMARY,
+              textDayFontWeight: '400',
+              textMonthFontWeight: '600',
+              textDayHeaderFontWeight: '500',
+              textDayFontSize: 16,
+              textMonthFontSize: 18,
+              textDayHeaderFontSize: 14,
+            }}
+          />
+        </View>
+
+        {/* Selected Date Header */}
+        <View style={styles.dateHeader}>
+          <Text style={styles.dateTitle}>
+            {new Date(selectedDate).toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </Text>
+          <Text style={styles.eventCount}>
+            {selectedDateEvents.length} {selectedDateEvents.length === 1 ? 'event' : 'events'}
+          </Text>
+        </View>
+
+        {/* Events List */}
+        <View style={styles.eventsContainer}>
+          {selectedDateEvents.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>No events</Text>
+              <Text style={styles.emptySubtitle}>
+                Tap the + button to create an event for this date
+              </Text>
+            </View>
+          ) : (
+            selectedDateEvents.map(renderEventCard)
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Create Event FAB */}
+      <TouchableOpacity style={styles.fab} onPress={handleCreateEvent}>
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.BACKGROUND.PRIMARY,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.BACKGROUND.PRIMARY,
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: FONT_SIZES.MEDIUM,
+    color: COLORS.TEXT.SECONDARY,
+  },
+
+  calendarContainer: {
+    backgroundColor: COLORS.BACKGROUND.CARD,
+    margin: 16,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+
+  dateHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+
+  dateTitle: {
+    fontSize: FONT_SIZES.LARGE,
+    fontWeight: '600',
+    color: COLORS.TEXT.PRIMARY,
+  },
+
+  eventCount: {
+    fontSize: FONT_SIZES.MEDIUM,
+    color: COLORS.TEXT.SECONDARY,
+    marginTop: 4,
+  },
+
+  eventsContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+
+  eventCard: {
+    backgroundColor: COLORS.BACKGROUND.CARD,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
+  eventTime: {
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80,
+  },
+
+  eventTimeText: {
+    fontSize: FONT_SIZES.SMALL,
+    color: COLORS.TEXT.SECONDARY,
+    textAlign: 'center',
+  },
+
+  eventContent: {
+    flex: 1,
+    padding: 16,
+    paddingLeft: 0,
+  },
+
+  eventTitle: {
+    fontSize: FONT_SIZES.MEDIUM,
+    fontWeight: '600',
+    color: COLORS.TEXT.PRIMARY,
+    marginBottom: 4,
+  },
+
+  eventLocation: {
+    fontSize: FONT_SIZES.SMALL,
+    color: COLORS.TEXT.SECONDARY,
+    marginBottom: 4,
+  },
+
+  eventCalendar: {
+    fontSize: FONT_SIZES.SMALL,
+    fontWeight: '500',
+  },
+
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+
+  emptyTitle: {
+    fontSize: FONT_SIZES.LARGE,
+    fontWeight: '600',
+    color: COLORS.TEXT.SECONDARY,
+    marginBottom: 8,
+  },
+
+  emptySubtitle: {
+    fontSize: FONT_SIZES.MEDIUM,
+    color: COLORS.TEXT.SECONDARY,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.PRIMARY,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+
+  fabIcon: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+});
