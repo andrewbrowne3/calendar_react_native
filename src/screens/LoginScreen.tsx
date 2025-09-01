@@ -11,7 +11,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { COLORS, FONT_SIZES } from '../constants/config';
 
 export const LoginScreen: React.FC = () => {
@@ -26,10 +26,12 @@ export const LoginScreen: React.FC = () => {
     }
 
     try {
+      console.log('🔐 LoginScreen: Attempting login with:', email.trim());
       await login({ email: email.trim(), password });
-      // Navigation will happen automatically via useAuth hook
+      console.log('✅ LoginScreen: Login successful, navigation should happen automatically');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message);
+      console.error('❌ LoginScreen: Login error:', error);
+      Alert.alert('Login Failed', error.message || 'An error occurred during login');
     }
   };
 

@@ -1,5 +1,5 @@
 // Profile Screen - User settings and info
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { COLORS, FONT_SIZES } from '../constants/config';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -25,9 +27,15 @@ export const ProfileScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              setIsLoggingOut(true);
+              console.log('🚪 Starting logout process...');
               await logout();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to logout');
+              console.log('✅ Logout completed successfully');
+            } catch (error: any) {
+              console.error('❌ Logout failed:', error);
+              Alert.alert('Logout Error', error.message || 'Failed to logout. Please try again.');
+            } finally {
+              setIsLoggingOut(false);
             }
           },
         },
@@ -126,8 +134,21 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
+      <TouchableOpacity 
+        style={[styles.logoutButton, isLoggingOut && styles.disabledButton]} 
+        onPress={handleLogout}
+        disabled={isLoggingOut}
+      >
+        {isLoggingOut ? (
+          <View style={styles.logoutLoading}>
+            <ActivityIndicator color="white" size="small" />
+            <Text style={[styles.logoutButtonText, { marginLeft: 8 }]}>
+              Logging out...
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        )}
       </TouchableOpacity>
 
       <View style={styles.bottomPadding} />
@@ -269,6 +290,16 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: FONT_SIZES.MEDIUM,
     fontWeight: '600',
+  },
+
+  disabledButton: {
+    opacity: 0.6,
+  },
+
+  logoutLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   bottomPadding: {

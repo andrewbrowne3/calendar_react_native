@@ -1,12 +1,22 @@
-// Authentication hook - React's state management at its finest!
-import { useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User, LoginRequest } from '../types';
 import apiService from '../services/api';
 import storageService from '../services/storage';
 import { logger } from '../utils/logger';
 
-// Custom hook for authentication - like a state manager but simpler!
-export const useAuth = () => {
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (credentials: LoginRequest) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  checkAuthStatus: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -127,16 +137,23 @@ export const useAuth = () => {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  return {
-    // State
+  const value = {
     user,
     isLoading,
     isAuthenticated,
-    
-    // Actions
     login,
     logout,
     refreshUser,
     checkAuthStatus,
   };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

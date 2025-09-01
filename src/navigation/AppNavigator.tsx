@@ -1,11 +1,11 @@
 // Main App Navigator - Clean navigation structure
-import React from 'react';
-import { Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { GoalsScreen } from '../screens/GoalsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -15,6 +15,7 @@ import { EditGoalScreen } from '../screens/EditGoalScreen';
 
 import { RootStackParamList, BottomTabParamList } from '../types/navigation';
 import { COLORS } from '../constants/config';
+import { logger } from '../utils/logger';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<BottomTabParamList>();
@@ -86,13 +87,30 @@ const TabIcon = ({ icon, color }: { icon: string; color: string }) => (
   <Text style={{ fontSize: 24, color }}>{icon}</Text>
 );
 
+// Loading screen component
+const LoadingScreen = () => (
+  <View style={styles.loadingContainer}>
+    <ActivityIndicator size="large" color={COLORS.PRIMARY} />
+    <Text style={styles.loadingText}>Loading...</Text>
+  </View>
+);
+
 // Main app navigator
 export const AppNavigator = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
+
+  // Log navigation state changes
+  useEffect(() => {
+    logger.navigation('Navigation state', {
+      isLoading,
+      isAuthenticated,
+      hasUser: !!user,
+      userEmail: user?.email,
+    });
+  }, [isLoading, isAuthenticated, user]);
 
   if (isLoading) {
-    // TODO: Add loading screen
-    return null;
+    return <LoadingScreen />;
   }
 
   return (
@@ -103,7 +121,7 @@ export const AppNavigator = () => {
           cardStyle: { backgroundColor: COLORS.BACKGROUND.PRIMARY },
         }}
       >
-        {user ? (
+        {isAuthenticated && user ? (
           // Authenticated user flow
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
@@ -134,3 +152,17 @@ export const AppNavigator = () => {
     </NavigationContainer>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.BACKGROUND.PRIMARY,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.TEXT.SECONDARY,
+  },
+});
