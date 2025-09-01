@@ -10,6 +10,8 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { GoalsScreen } from '../screens/GoalsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { CreateGoalScreen } from '../screens/CreateGoalScreen';
+import { EditGoalScreen } from '../screens/EditGoalScreen';
 
 import { RootStackParamList, BottomTabParamList } from '../types/navigation';
 import { COLORS } from '../constants/config';
@@ -103,7 +105,27 @@ export const AppNavigator = () => {
       >
         {user ? (
           // Authenticated user flow
-          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <>
+            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen 
+              name="CreateGoal" 
+              component={CreateGoalScreen}
+              options={{
+                headerShown: true,
+                title: 'Create Goal',
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen 
+              name="EditGoal" 
+              component={EditGoalScreen}
+              options={{
+                headerShown: true,
+                title: 'Edit Goal',
+                presentation: 'modal',
+              }}
+            />
+          </>
         ) : (
           // Unauthenticated user flow
           <Stack.Screen name="Auth" component={LoginScreen} />

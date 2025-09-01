@@ -17,6 +17,8 @@ export type AppStackParamList = {
   // Modal screens that can be opened from anywhere
   GoalDetail: { goal: Goal };
   GoalForm: { goal?: Goal }; // undefined for new goal, Goal for editing
+  CreateGoal: undefined;
+  EditGoal: { goal: Goal };
   EventDetail: { event: Event };
   EventForm: { event?: Event };
   CalendarForm: { calendar?: Calendar };

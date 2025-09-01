@@ -79,6 +79,33 @@ class StorageService {
     const refreshToken = await this.getRefreshToken();
     return !!(accessToken && refreshToken);
   }
+
+  // Public methods for general data storage
+  async saveItem(key: string, value: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (error) {
+      console.error(`Error storing ${key}:`, error);
+      throw new Error(`Failed to store ${key}`);
+    }
+  }
+
+  async getItem(key: string): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      console.error(`Error retrieving ${key}:`, error);
+      return null;
+    }
+  }
+
+  async removeItem(key: string): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Error removing ${key}:`, error);
+    }
+  }
 }
 
 // Export a singleton instance (like a static class in C++)

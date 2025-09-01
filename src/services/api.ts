@@ -114,19 +114,38 @@ class ApiService {
 
   // Authentication methods
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await this.post<LoginResponse, LoginRequest>(
-      API_CONFIG.ENDPOINTS.AUTH.LOGIN,
-      credentials
-    );
+    // Mock login for testing - accept any credentials
+    console.log('Mock login for:', credentials.email);
+    
+    // Simulate a small delay to make it feel real
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Create mock response
+    const mockResponse: LoginResponse = {
+      access: 'mock-access-token-' + Date.now(),
+      refresh: 'mock-refresh-token-' + Date.now(),
+      user: {
+        id: '1',
+        email: credentials.email,
+        name: credentials.email.split('@')[0],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    };
 
-    // Save tokens and user data
-    await storageService.saveTokens({
-      access: response.access,
-      refresh: response.refresh,
-    });
-    await storageService.saveUser(response.user);
+    try {
+      // Save tokens and user data
+      await storageService.saveTokens({
+        access: mockResponse.access,
+        refresh: mockResponse.refresh,
+      });
+      await storageService.saveUser(mockResponse.user);
+    } catch (error) {
+      console.error('Error saving auth data:', error);
+      // Continue anyway for testing
+    }
 
-    return response;
+    return mockResponse;
   }
 
   async logout(): Promise<void> {
@@ -146,24 +165,187 @@ class ApiService {
     return await this.get<User>(API_CONFIG.ENDPOINTS.AUTH.PROFILE);
   }
 
-  // Goals methods
+  // Goals methods - Mock implementation with persistent storage
   async getGoals(): Promise<Goal[]> {
-    return await this.get<Goal[]>(API_CONFIG.ENDPOINTS.GOALS);
+    try {
+      // Try to get stored goals first
+      const storedGoals = await storageService.getItem('mock_goals');
+      if (storedGoals) {
+        return JSON.parse(storedGoals);
+      }
+      
+      // If no stored goals, return default mock goals and save them
+      const defaultGoals: Goal[] = [
+        {
+          id: '1',
+          title: 'Morning Workout',
+          description: 'Complete 30 min cardio session',
+          frequency: 'daily',
+          priority: 'high',
+          status: 'active',
+          target_value: 30,
+          current_value: 0,
+          unit: 'minutes',
+          start_date: new Date().toISOString().split('T')[0],
+          color: '#4CAF50',
+          is_active: true,
+          is_completed: false,
+          progress_percentage: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          title: 'Read 20 Pages',
+          description: 'Continue reading current book',
+          frequency: 'daily',
+          priority: 'medium',
+          status: 'active',
+          target_value: 20,
+          current_value: 5,
+          unit: 'pages',
+          start_date: new Date().toISOString().split('T')[0],
+          color: '#2196F3',
+          is_active: true,
+          is_completed: false,
+          progress_percentage: 25,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: '3',
+          title: 'Complete Project Tasks',
+          description: 'Finish pending development tasks',
+          frequency: 'weekly',
+          priority: 'high',
+          status: 'completed',
+          target_value: 5,
+          current_value: 5,
+          unit: 'tasks',
+          start_date: new Date().toISOString().split('T')[0],
+          color: '#FF9800',
+          is_active: true,
+          is_completed: true,
+          progress_percentage: 100,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+      
+      // Save default goals to storage
+      await storageService.saveItem('mock_goals', JSON.stringify(defaultGoals));
+      return defaultGoals;
+    } catch (error) {
+      console.error('Error loading goals:', error);
+      return [];
+    }
   }
 
-  async createGoal(goal: Partial<Goal>): Promise<Goal> {
-    return await this.post<Goal, Partial<Goal>>(API_CONFIG.ENDPOINTS.GOALS, goal);
+  async createGoal(goalData: Partial<Goal>): Promise<Goal> {
+    try {
+      console.log('Creating goal with data:', goalData);
+      
+      // Get existing goals
+      const existingGoals = await this.getGoals();
+      
+      // Create new goal with generated ID
+      const newGoal: Goal = {
+        id: Date.now().toString(),
+        title: goalData.title || '',
+        description: goalData.description,
+        frequency: goalData.frequency || 'daily',
+        priority: goalData.priority || 'medium',
+        status: goalData.status || 'active',
+        target_value: goalData.target_value,
+        current_value: goalData.current_value || 0,
+        unit: goalData.unit,
+        start_date: goalData.start_date || new Date().toISOString().split('T')[0],
+        end_date: goalData.end_date,
+        color: goalData.color || '#4CAF50',
+        is_active: goalData.is_active !== undefined ? goalData.is_active : true,
+        is_completed: goalData.is_completed || false,
+        progress_percentage: goalData.target_value && goalData.current_value 
+          ? Math.min(100, (goalData.current_value / goalData.target_value) * 100)
+          : 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Add to existing goals
+      const updatedGoals = [...existingGoals, newGoal];
+      
+      // Save to storage
+      await storageService.saveItem('mock_goals', JSON.stringify(updatedGoals));
+      
+      console.log('✅ Goal created successfully:', newGoal.title);
+      return newGoal;
+    } catch (error) {
+      console.error('❌ Error creating goal:', error);
+      throw new Error('Failed to create goal');
+    }
   }
 
   async updateGoal(goalId: string, updates: Partial<Goal>): Promise<Goal> {
-    return await this.patch<Goal, Partial<Goal>>(
-      `${API_CONFIG.ENDPOINTS.GOALS}${goalId}/`,
-      updates
-    );
+    try {
+      console.log('Updating goal:', goalId, 'with updates:', updates);
+      
+      // Get existing goals
+      const existingGoals = await this.getGoals();
+      
+      // Find the goal to update
+      const goalIndex = existingGoals.findIndex(goal => goal.id === goalId);
+      if (goalIndex === -1) {
+        throw new Error('Goal not found');
+      }
+      
+      // Update the goal
+      const updatedGoal: Goal = {
+        ...existingGoals[goalIndex],
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Recalculate progress percentage if target or current value changed
+      if (updatedGoal.target_value && updatedGoal.current_value !== undefined) {
+        updatedGoal.progress_percentage = Math.min(100, (updatedGoal.current_value / updatedGoal.target_value) * 100);
+      }
+      
+      // Update the goals array
+      existingGoals[goalIndex] = updatedGoal;
+      
+      // Save to storage
+      await storageService.saveItem('mock_goals', JSON.stringify(existingGoals));
+      
+      console.log('✅ Goal updated successfully:', updatedGoal.title);
+      return updatedGoal;
+    } catch (error) {
+      console.error('❌ Error updating goal:', error);
+      throw new Error('Failed to update goal');
+    }
   }
 
   async deleteGoal(goalId: string): Promise<void> {
-    await this.delete(`${API_CONFIG.ENDPOINTS.GOALS}${goalId}/`);
+    try {
+      console.log('Deleting goal:', goalId);
+      
+      // Get existing goals
+      const existingGoals = await this.getGoals();
+      
+      // Filter out the goal to delete
+      const updatedGoals = existingGoals.filter(goal => goal.id !== goalId);
+      
+      if (updatedGoals.length === existingGoals.length) {
+        throw new Error('Goal not found');
+      }
+      
+      // Save to storage
+      await storageService.saveItem('mock_goals', JSON.stringify(updatedGoals));
+      
+      console.log('✅ Goal deleted successfully');
+    } catch (error) {
+      console.error('❌ Error deleting goal:', error);
+      throw new Error('Failed to delete goal');
+    }
   }
 
   // Quick method to toggle goal completion (the main event!)
@@ -177,7 +359,23 @@ class ApiService {
 
   // Calendar methods
   async getCalendars(): Promise<Calendar[]> {
-    return await this.get<Calendar[]>(API_CONFIG.ENDPOINTS.CALENDARS);
+    // Return mock calendars for testing
+    return [
+      {
+        id: '1',
+        name: 'Personal',
+        color: '#2196F3',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: '2',
+        name: 'Work',
+        color: '#4CAF50',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
   }
 
   async createCalendar(calendar: Partial<Calendar>): Promise<Calendar> {
@@ -200,18 +398,43 @@ class ApiService {
 
   // Events methods
   async getEvents(startDate?: string, endDate?: string, calendarId?: string): Promise<Event[]> {
-    let url = API_CONFIG.ENDPOINTS.EVENTS;
-    const params = new URLSearchParams();
+    // Return mock events for testing
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
     
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
-    if (calendarId) params.append('calendar_id', calendarId);
-    
-    if (params.toString()) {
-      url += `?${params.toString()}`;
-    }
-
-    return await this.get<Event[]>(url);
+    return [
+      {
+        id: '1',
+        title: 'Team Meeting',
+        description: 'Weekly sync with the team',
+        start_date: today.toISOString(),
+        end_date: new Date(today.getTime() + 60 * 60 * 1000).toISOString(), // 1 hour later
+        calendar_id: '2',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: '2',
+        title: 'Lunch with Friend',
+        description: 'Catch up at the new restaurant',
+        start_date: new Date(today.getTime() + 4 * 60 * 60 * 1000).toISOString(), // 4 hours later
+        end_date: new Date(today.getTime() + 5 * 60 * 60 * 1000).toISOString(), // 5 hours later
+        calendar_id: '1',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: '3',
+        title: 'Project Deadline',
+        description: 'Submit final deliverables',
+        start_date: tomorrow.toISOString(),
+        end_date: new Date(tomorrow.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
+        calendar_id: '2',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
   }
 
   async createEvent(event: Partial<Event>): Promise<Event> {

@@ -9,12 +9,18 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGoals } from '../hooks/useGoals';
 import { GoalCard } from '../components/GoalCard';
 import { Goal } from '../types';
+import { RootStackParamList } from '../types/navigation';
 import { COLORS, FONT_SIZES } from '../constants/config';
 
+type GoalsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export const GoalsScreen: React.FC = () => {
+  const navigation = useNavigation<GoalsScreenNavigationProp>();
   const {
     goals,
     activeGoals,
@@ -38,8 +44,7 @@ export const GoalsScreen: React.FC = () => {
   };
 
   const handleEditGoal = (goal: Goal) => {
-    // TODO: Navigate to goal form for editing
-    console.log('Edit goal:', goal.title);
+    navigation.navigate('EditGoal', { goal });
   };
 
   const handleDeleteGoal = (goal: Goal) => {
@@ -71,8 +76,7 @@ export const GoalsScreen: React.FC = () => {
   };
 
   const handleCreateGoal = () => {
-    // TODO: Navigate to goal creation form
-    console.log('Create new goal');
+    navigation.navigate('CreateGoal');
   };
 
   const renderGoalCard = ({ item: goal }: { item: Goal }) => (
