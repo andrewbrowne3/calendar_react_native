@@ -66,12 +66,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(true);
       logger.auth('Starting login', { email: credentials.email });
       
+      // Clear any existing invalid tokens before login
+      await storageService.clearAll();
+      logger.debug('Cleared all storage before login');
+      
       const response = await apiService.login(credentials);
       
       if (response.user && response.user.email) {
         setUser(response.user);
         setIsAuthenticated(true);
         logger.auth('Login successful', { email: response.user.email });
+        
+        // Small delay to ensure token is properly set in interceptors
+        await new Promise(resolve => setTimeout(resolve, 100));
       } else {
         throw new Error('Invalid user data received from server');
       }

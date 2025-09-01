@@ -9,12 +9,14 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
+import { useSelector, useDispatch } from 'react-redux';
 import { COLORS, FONT_SIZES } from '../constants/config';
+import { RootState, AppDispatch } from '../store/store';
+import { logoutUser } from '../store/slices/authSlice';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, logout } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, isLoading } = useSelector((state: RootState) => state.auth);
 
   const handleLogout = () => {
     Alert.alert(
@@ -27,15 +29,12 @@ export const ProfileScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              setIsLoggingOut(true);
-              console.log('🚪 Starting logout process...');
-              await logout();
-              console.log('✅ Logout completed successfully');
+              console.log('🚪 Starting Redux logout process...');
+              await dispatch(logoutUser());
+              console.log('✅ Redux logout completed successfully');
             } catch (error: any) {
-              console.error('❌ Logout failed:', error);
+              console.error('❌ Redux logout failed:', error);
               Alert.alert('Logout Error', error.message || 'Failed to logout. Please try again.');
-            } finally {
-              setIsLoggingOut(false);
             }
           },
         },
@@ -135,11 +134,11 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Logout Button */}
       <TouchableOpacity 
-        style={[styles.logoutButton, isLoggingOut && styles.disabledButton]} 
+        style={[styles.logoutButton, isLoading && styles.disabledButton]} 
         onPress={handleLogout}
-        disabled={isLoggingOut}
+        disabled={isLoading}
       >
-        {isLoggingOut ? (
+        {isLoading ? (
           <View style={styles.logoutLoading}>
             <ActivityIndicator color="white" size="small" />
             <Text style={[styles.logoutButtonText, { marginLeft: 8 }]}>

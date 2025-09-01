@@ -45,17 +45,27 @@ class StorageService {
   // Authentication token methods
   async saveTokens(tokens: AuthTokens): Promise<void> {
     logger.info('Saving authentication tokens');
-    await this.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.access);
-    await this.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh);
+    await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.access);
+    await AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh);
     logger.info('Tokens saved successfully');
   }
 
   async getAccessToken(): Promise<string | null> {
-    return await this.getItem<string>(STORAGE_KEYS.ACCESS_TOKEN);
+    try {
+      return await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    } catch (error) {
+      logger.error('Error retrieving access token:', error);
+      return null;
+    }
   }
 
   async getRefreshToken(): Promise<string | null> {
-    return await this.getItem<string>(STORAGE_KEYS.REFRESH_TOKEN);
+    try {
+      return await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+    } catch (error) {
+      logger.error('Error retrieving refresh token:', error);
+      return null;
+    }
   }
 
   async clearTokens(): Promise<void> {

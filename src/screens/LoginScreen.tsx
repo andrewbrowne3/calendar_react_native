@@ -11,13 +11,16 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
+import { useSelector, useDispatch } from 'react-redux';
 import { COLORS, FONT_SIZES } from '../constants/config';
+import { RootState, AppDispatch } from '../store/store';
+import { loginUser } from '../store/slices/authSlice';
 
 export const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
+  const { isLoading, error } = useSelector((state: RootState) => state.auth);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -26,12 +29,18 @@ export const LoginScreen: React.FC = () => {
     }
 
     try {
-      console.log('🔐 LoginScreen: Attempting login with:', email.trim());
-      await login({ email: email.trim(), password });
-      console.log('✅ LoginScreen: Login successful, navigation should happen automatically');
+      console.log('🔐 LoginScreen: Attempting Redux login with:', email.trim());
+      const result = await dispatch(loginUser({ email: email.trim(), password }));
+      
+      if (loginUser.fulfilled.match(result)) {
+        console.log('✅ LoginScreen: Redux login successful, navigation should happen automatically');
+      } else {
+        console.error('❌ LoginScreen: Redux login failed:', result.payload);
+        Alert.alert('Login Failed', result.payload as string || 'An error occurred during login');
+      }
     } catch (error: any) {
-      console.error('❌ LoginScreen: Login error:', error);
-      Alert.alert('Login Failed', error.message || 'An error occurred during login');
+      console.error('❌ LoginScreen: Unexpected login error:', error);
+      Alert.alert('Login Failed', error.message || 'An unexpected error occurred');
     }
   };
 

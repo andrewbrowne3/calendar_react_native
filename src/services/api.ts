@@ -38,6 +38,8 @@ class ApiService {
           const token = await storageService.getAccessToken();
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+            console.log('🔑 TOKEN BEING SENT:', token.substring(0, 50) + '...');
+            console.log('🔑 FULL AUTH HEADER:', `Bearer ${token.substring(0, 50)}...`);
             logger.debug('Auth header added to request');
           }
         } else {
@@ -166,13 +168,30 @@ class ApiService {
       );
 
       console.log('📡 Login response received:', response);
+      console.log('🔑 Access token received (first 50 chars):', response.access.substring(0, 50) + '...');
+      console.log('🔑 Refresh token received (first 50 chars):', response.refresh.substring(0, 50) + '...');
 
       // Save tokens and user data
+      console.log('💾 Saving tokens to storage...');
       await storageService.saveTokens({
         access: response.access,
         refresh: response.refresh,
       });
+      console.log('💾 Tokens saved successfully');
+      
+      console.log('👤 Saving user data to storage...');
       await storageService.saveUser(response.user);
+      console.log('👤 User data saved successfully');
+
+      // Verify tokens were saved
+      const savedAccessToken = await storageService.getAccessToken();
+      const savedRefreshToken = await storageService.getRefreshToken();
+      const savedUser = await storageService.getUser();
+      
+      console.log('🔍 Verification - Saved access token exists:', !!savedAccessToken);
+      console.log('🔍 Verification - Saved refresh token exists:', !!savedRefreshToken);
+      console.log('🔍 Verification - Saved user exists:', !!savedUser);
+      console.log('🔍 Verification - Saved user email:', savedUser?.email);
 
       console.log('✅ Login successful:', response.user.email);
       return response;

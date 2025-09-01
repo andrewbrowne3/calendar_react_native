@@ -16,9 +16,13 @@ export const useEvents = () => {
       
       console.log('📆 Loading events...');
       const eventsData = await apiService.getEvents();
+      console.log('🔥 RAW EVENTS DATA:', JSON.stringify(eventsData, null, 2));
       setEvents(eventsData);
       
       console.log(`✅ Loaded ${eventsData.length} events`);
+      eventsData.forEach((event, index) => {
+        console.log(`Event ${index + 1}: ${event.title} on ${event.start_time}`);
+      });
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to load events';
       setError(errorMessage);

@@ -1,5 +1,5 @@
 // Home Screen - Calendar view with events
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,25 +10,64 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
-import { useEvents } from '../hooks/useEvents';
-import { useCalendars } from '../hooks/useCalendars';
+import { useSelector, useDispatch } from 'react-redux';
 import { COLORS, FONT_SIZES } from '../constants/config';
 import { Event } from '../types';
+import { logger } from '../utils/logger';
+import { RootState, AppDispatch } from '../store/store';
+import { fetchEvents, deleteEvent } from '../store/slices/eventsSlice';
+import { fetchCalendars } from '../store/slices/calendarsSlice';
 
 export const HomeScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const { events, isLoading: eventsLoading, getEventsForDate, getEventsByDate } = useEvents();
-  const { calendars, isLoading: calendarsLoading } = useCalendars();
+  const dispatch = useDispatch<AppDispatch>();
+  
+  const { events, isLoading: eventsLoading } = useSelector((state: RootState) => state.events);
+  const { calendars, isLoading: calendarsLoading } = useSelector((state: RootState) => state.calendars);
+
+  // Initialize data loading like Flutter does
+  useEffect(() => {
+    logger.debug('HomeScreen: Component mounted, loading events...');
+    logger.debug('HomeScreen: Current events count:', events.length);
+    logger.debug('HomeScreen: Current calendars count:', calendars.length);
+    
+    // Load events and calendars with Redux
+    dispatch(fetchEvents());
+    dispatch(fetchCalendars());
+  }, [dispatch]);
 
   // Get events for selected date
   const selectedDateEvents = useMemo(() => {
-    return getEventsForDate(new Date(selectedDate));
-  }, [selectedDate, getEventsForDate]);
+    const selectedDateObj = new Date(selectedDate);
+    const dateString = selectedDateObj.toISOString().split('T')[0];
+    
+    const filteredEvents = events.filter(event => {
+      const eventDate = new Date(event.start_time).toISOString().split('T')[0];
+      return eventDate === dateString;
+    });
+    
+    logger.debug('HomeScreen: Events for date', selectedDate, 'Total events:', events.length, 'Filtered:', filteredEvents.length);
+    return filteredEvents;
+  }, [selectedDate, events]);
+
+  // Get events grouped by date (for calendar markers)
+  const eventsByDate = useMemo(() => {
+    const grouped: { [date: string]: Event[] } = {};
+    
+    events.forEach(event => {
+      const date = new Date(event.start_time).toISOString().split('T')[0];
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(event);
+    });
+    
+    return grouped;
+  }, [events]);
 
   // Prepare marked dates for calendar
   const markedDates = useMemo(() => {
     const marks: any = {};
-    const eventsByDate = getEventsByDate();
     
     // Mark all dates with events
     Object.keys(eventsByDate).forEach(date => {
@@ -53,7 +92,7 @@ export const HomeScreen: React.FC = () => {
     };
     
     return marks;
-  }, [selectedDate, getEventsByDate, calendars]);
+  }, [selectedDate, eventsByDate, calendars]);
 
   const getCalendarColor = (calendarId: string): string => {
     const calendar = calendars.find(c => c.id === calendarId);
@@ -82,7 +121,11 @@ export const HomeScreen: React.FC = () => {
       `Are you sure you want to delete "${event.title}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete:', event.id) },
+        { 
+          text: 'Delete', 
+          style: 'destructive', 
+          onPress: () => dispatch(deleteEvent(event.id))
+        },
       ]
     );
   };

@@ -4,8 +4,8 @@ import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSelector, useDispatch } from 'react-redux';
 
-import { useAuth } from '../contexts/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { GoalsScreen } from '../screens/GoalsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -16,6 +16,8 @@ import { EditGoalScreen } from '../screens/EditGoalScreen';
 import { RootStackParamList, BottomTabParamList } from '../types/navigation';
 import { COLORS } from '../constants/config';
 import { logger } from '../utils/logger';
+import { RootState, AppDispatch } from '../store/store';
+import { checkAuthStatus } from '../store/slices/authSlice';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<BottomTabParamList>();
@@ -97,7 +99,13 @@ const LoadingScreen = () => (
 
 // Main app navigator
 export const AppNavigator = () => {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
+
+  // Check auth status on app start
+  useEffect(() => {
+    dispatch(checkAuthStatus());
+  }, [dispatch]);
 
   // Log navigation state changes
   useEffect(() => {
