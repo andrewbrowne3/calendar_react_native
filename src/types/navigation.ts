@@ -19,6 +19,8 @@ export type AppStackParamList = {
   GoalForm: { goal?: Goal }; // undefined for new goal, Goal for editing
   CreateGoal: undefined;
   EditGoal: { goal: Goal };
+  CreateEvent: { date?: string };
+  EditEvent: { event: Event };
   EventDetail: { event: Event };
   EventForm: { event?: Event };
   CalendarForm: { calendar?: Calendar };

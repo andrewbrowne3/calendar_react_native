@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import { COLORS, FONT_SIZES } from '../constants/config';
 import { Event } from '../types';
 import { logger } from '../utils/logger';
@@ -21,6 +22,7 @@ import { fetchCalendars } from '../store/slices/calendarsSlice';
 export const HomeScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const dispatch = useDispatch<AppDispatch>();
+  const navigation = useNavigation();
   
   const { events, isLoading: eventsLoading } = useSelector((state: RootState) => state.events);
   const { calendars, isLoading: calendarsLoading } = useSelector((state: RootState) => state.calendars);
@@ -75,7 +77,7 @@ export const HomeScreen: React.FC = () => {
       marks[date] = {
         marked: true,
         dots: dayEvents.slice(0, 3).map((event, index) => {
-          const calendar = calendars.find(c => c.id === event.calendar_id);
+          const calendar = calendars.find(c => c.id === event.calendar.id);
           return {
             key: `event-${index}`,
             color: calendar?.color || COLORS.PRIMARY,
@@ -104,15 +106,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleEventPress = (event: Event) => {
-    Alert.alert(
-      event.title,
-      `${event.description || 'No description'}\n\nLocation: ${event.location || 'No location'}\nTime: ${formatEventTime(event)}`,
-      [
-        { text: 'Edit', onPress: () => console.log('Edit event:', event.id) },
-        { text: 'Delete', onPress: () => handleDeleteEvent(event), style: 'destructive' },
-        { text: 'OK', style: 'cancel' },
-      ]
-    );
+    navigation.navigate('EventDetail' as never, { event } as never);
   };
 
   const handleDeleteEvent = (event: Event) => {
@@ -131,7 +125,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleCreateEvent = () => {
-    console.log('Create new event for date:', selectedDate);
+    navigation.navigate('CreateEvent' as never, { date: selectedDate } as never);
   };
 
   const formatEventTime = (event: Event): string => {
@@ -152,7 +146,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const renderEventCard = (event: Event) => {
-    const calendar = calendars.find(c => c.id === event.calendar_id);
+    const calendar = calendars.find(c => c.id === event.calendar.id);
     const calendarColor = calendar?.color || COLORS.PRIMARY;
     
     return (
@@ -162,19 +156,34 @@ export const HomeScreen: React.FC = () => {
         onPress={() => handleEventPress(event)}
       >
         <View style={styles.eventTime}>
-          <Text style={styles.eventTimeText}>{formatEventTime(event)}</Text>
+          <Text style={[
+            styles.eventTimeText,
+            event.completed && styles.completedText
+          ]}>
+            {formatEventTime(event)}
+          </Text>
         </View>
         
         <View style={styles.eventContent}>
-          <Text style={styles.eventTitle} numberOfLines={1}>
+          <Text style={[
+            styles.eventTitle,
+            event.completed && styles.completedText
+          ]} numberOfLines={1}>
             {event.title}
           </Text>
           {event.location && (
-            <Text style={styles.eventLocation} numberOfLines={1}>
+            <Text style={[
+              styles.eventLocation,
+              event.completed && styles.completedText
+            ]} numberOfLines={1}>
               📍 {event.location}
             </Text>
           )}
-          <Text style={[styles.eventCalendar, { color: calendarColor }]}>
+          <Text style={[
+            styles.eventCalendar, 
+            { color: calendarColor },
+            event.completed && styles.completedText
+          ]}>
             {calendar?.name || 'Unknown Calendar'}
           </Text>
         </View>
@@ -404,5 +413,10 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+
+  completedText: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
   },
 });

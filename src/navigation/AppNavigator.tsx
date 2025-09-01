@@ -12,6 +12,9 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { CreateGoalScreen } from '../screens/CreateGoalScreen';
 import { EditGoalScreen } from '../screens/EditGoalScreen';
+import { CreateEventScreen } from '../screens/CreateEventScreen';
+import { EditEventScreen } from '../screens/EditEventScreen';
+import { EventDetailScreen } from '../screens/EventDetailScreen';
 
 import { RootStackParamList, BottomTabParamList } from '../types/navigation';
 import { COLORS } from '../constants/config';
@@ -149,6 +152,30 @@ export const AppNavigator = () => {
                 headerShown: true,
                 title: 'Edit Goal',
                 presentation: 'modal',
+              }}
+            />
+            <Stack.Screen 
+              name="CreateEvent" 
+              component={CreateEventScreen}
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen 
+              name="EditEvent" 
+              component={EditEventScreen}
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen 
+              name="EventDetail" 
+              component={EventDetailScreen}
+              options={{
+                headerShown: false,
+                presentation: 'card',
               }}
             />
           </>

@@ -75,6 +75,27 @@ export const deleteEvent = createAsyncThunk(
   }
 );
 
+export const toggleEventCompletion = createAsyncThunk(
+  'events/toggleCompletion',
+  async (eventId: string, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as any;
+      const event = state.events.events.find((e: Event) => e.id === eventId);
+      if (!event) throw new Error('Event not found');
+      
+      const newCompletedStatus = !event.completed;
+      console.log('✅ Redux: Toggling event completion:', eventId, 'to:', newCompletedStatus);
+      
+      const updatedEvent = await apiService.updateEvent(eventId, { completed: newCompletedStatus });
+      console.log('✅ Redux: Event completion toggled');
+      return updatedEvent;
+    } catch (error: any) {
+      console.error('❌ Redux: Failed to toggle event completion:', error.message);
+      return rejectWithValue(error.message || 'Failed to toggle completion');
+    }
+  }
+);
+
 const eventsSlice = createSlice({
   name: 'events',
   initialState,
@@ -131,6 +152,16 @@ const eventsSlice = createSlice({
         state.events = state.events.filter(event => event.id !== action.payload);
       })
       .addCase(deleteEvent.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      // Toggle event completion
+      .addCase(toggleEventCompletion.fulfilled, (state, action) => {
+        const index = state.events.findIndex(event => event.id === action.payload.id);
+        if (index !== -1) {
+          state.events[index] = action.payload;
+        }
+      })
+      .addCase(toggleEventCompletion.rejected, (state, action) => {
         state.error = action.payload as string;
       });
   },
